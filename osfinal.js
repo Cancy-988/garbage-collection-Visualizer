@@ -1,4 +1,3 @@
-const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const allocateBtn = document.getElementById('allocateBtn');
 const collectBtn = document.getElementById('collectBtn');
@@ -7,12 +6,25 @@ const usageText = document.getElementById('usage');
 const memoryBlocks = document.querySelector('.memory-blocks');
 const deletedTableBody = document.getElementById('deletedTableBody');
 
-let isPaused = false;
 let totalMemory = 300;
 let usedMemory = 139;
 let blockCount = 11;
 let timeStep = 0;
 let deletedBlocks = [];
+
+// Lists of filenames and extensions
+const filenames = [
+    'document', 'image', 'video', 'audio', 'script',
+    'data', 'config', 'archive', 'project', 'backup'
+];
+const extensions = ['.txt', '.jpg', '.mp4', '.js'];
+
+// Function to generate a random filename with extension
+function generateFilename() {
+    const randomFilename = filenames[Math.floor(Math.random() * filenames.length)];
+    const randomExtension = extensions[Math.floor(Math.random() * extensions.length)];
+    return `${randomFilename}${blockCount}${randomExtension}`;
+}
 
 const memoryCtx = document.getElementById('memoryChart').getContext('2d');
 const memoryChart = new Chart(memoryCtx, {
@@ -20,7 +32,7 @@ const memoryChart = new Chart(memoryCtx, {
     data: {
         labels: [0],
         datasets: [{
-            label: 'Memory Usage (units)',
+            label: 'Memory Usage (MB)',
             data: [usedMemory],
             borderColor: '#2ecc71',
             backgroundColor: 'rgba(46, 204, 113, 0.1)',
@@ -33,9 +45,12 @@ const memoryChart = new Chart(memoryCtx, {
         maintainAspectRatio: false,
         scales: {
             x: { title: { display: true, text: 'Time' } },
-            y: { min: 0, max: totalMemory, title: { display: true, text: 'Memory (units)' } }
+            y: { min: 0, max: totalMemory, title: { display: true, text: 'Memory (MB)' } }
         },
-        plugins: { legend: { display: false } }
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+        }
     }
 });
 
@@ -48,20 +63,26 @@ const allocationChart = new Chart(allocationCtx, {
             data: [usedMemory, totalMemory - usedMemory],
             backgroundColor: ['#2ecc71', '#ecf0f1'],
             borderColor: ['#27ae60', '#d5dbdb'],
-            borderWidth: 1
+            borderWidth: 1,
+            hoverOffset: 0,
+            hoverBackgroundColor: ['#2ecc71', '#ecf0f1'],
+            hoverBorderColor: ['#27ae60', '#d5dbdb']
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
+        plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { enabled: false }
+        }
     }
 });
 
 function updateMemoryUsage() {
     const percentage = (usedMemory / totalMemory) * 100;
     progress.style.width = `${percentage}%`;
-    usageText.textContent = `${usedMemory} / ${totalMemory} units`;
+    usageText.textContent = `${usedMemory} / ${totalMemory} MB`;
     
     timeStep++;
     memoryChart.data.labels.push(timeStep);
@@ -84,8 +105,7 @@ function updateDeletedTable() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${block.id}</td>
-            <td>${block.size}</td>
-            <td>${block.time}</td>
+            <td>${block.size} MB</td>
         `;
         deletedTableBody.appendChild(row);
     });
@@ -95,16 +115,9 @@ function sortTable(column) {
     deletedBlocks.sort((a, b) => {
         if (column === 0) return a.id.localeCompare(b.id);
         if (column === 1) return a.size - b.size;
-        if (column === 2) return new Date(a.time) - new Date(b.time);
     });
     updateDeletedTable();
 }
-
-pauseBtn.addEventListener('click', () => {
-    isPaused = !isPaused;
-    pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
-    pauseBtn.style.backgroundColor = isPaused ? '#2ecc71' : '#e74c3c';
-});
 
 resetBtn.addEventListener('click', () => {
     usedMemory = 0;
@@ -119,8 +132,6 @@ resetBtn.addEventListener('click', () => {
 });
 
 allocateBtn.addEventListener('click', () => {
-    if (isPaused) return;
-
     const size = Math.floor(Math.random() * 50) + 10;
     if (usedMemory + size > totalMemory) {
         alert('Not enough memory to allocate!');
@@ -130,26 +141,25 @@ allocateBtn.addEventListener('click', () => {
     blockCount++;
     usedMemory += size;
 
+    const filename = generateFilename();
     const block = document.createElement('div');
     block.classList.add('block');
     block.innerHTML = `
-        <p>Block #${blockCount} <span class="status">Referenced</span></p>
-        <p>Size: ${size} units</p>
+        <p>${filename} <span class="status">Referenced</span></p>
+        <p>Size: ${size} MB</p>
     `;
     memoryBlocks.appendChild(block);
     updateMemoryUsage();
 });
 
 collectBtn.addEventListener('click', () => {
-    if (isPaused) return;
-
     const blocks = memoryBlocks.querySelectorAll('.block');
     let removedMemory = 0;
 
     blocks.forEach((block, index) => {
         if (index % 2 === 0) {
             const blockText = block.querySelector('p:first-child').textContent;
-            const blockId = blockText.split(' ')[1];
+            const blockId = blockText.split(' ')[0]; // Extract the filename (before "Referenced")
             const sizeText = block.querySelector('p:last-child').textContent;
             const size = parseInt(sizeText.match(/\d+/)[0]);
             removedMemory += size;
@@ -159,8 +169,7 @@ collectBtn.addEventListener('click', () => {
             
             deletedBlocks.unshift({
                 id: blockId,
-                size: size,
-                time: new Date().toLocaleTimeString()
+                size: size
             });
         }
     });
