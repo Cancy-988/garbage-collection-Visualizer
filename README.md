@@ -81,7 +81,7 @@ Then navigate to http://localhost:8000 in your browser.
 
 🔧<b> How to Use</b>
 
-Start the App: Open the application in your browser. 🔥  
+Start the App: Open the application in your browser.   
 
 Allocate Memory:  
 
@@ -103,7 +103,7 @@ Unreferenced memory blocks will be deallocated and listed under Deleted Memory B
 
 Reset the Simulation:  
 
-Click the Reset button to clear all memory blocks and start over. 🧹
+Click the Reset button to clear all memory blocks and start over. 
 
 🗂️ <b> Code Breakdown</b>
 
